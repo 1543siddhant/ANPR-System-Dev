@@ -1,38 +1,27 @@
+# Ultralytics YOLO 🚀, GPL-3.0 license
+
 import hydra
 import torch
-import easyocr
-import cv2
-from PIL import Image
-
 from ultralytics.yolo.engine.predictor import BasePredictor
 from ultralytics.yolo.utils import DEFAULT_CONFIG, ROOT, ops
 from ultralytics.yolo.utils.checks import check_imgsz
 from ultralytics.yolo.utils.plotting import Annotator, colors, save_one_box
+
+import easyocr
+import cv2
 
 reader = easyocr.Reader(['en'], gpu=True)
 
 def perform_ocr_on_image(img, coordinates):
     x, y, w, h = map(int, coordinates)
     cropped_img = img[y:h, x:w]
-
     gray_img = cv2.cvtColor(cropped_img, cv2.COLOR_RGB2GRAY)
     results = reader.readtext(gray_img)
-
+    
     text = ""
     for res in results:
-        if len(results) == 1 or (len(res[1]) > 6 and res[2] > 0.2):
-            text = res[1]
-
-    return str(text)
-
-def adjust_bbox_height(xyxy, reduction_factor=0.82):
-    x1, y1, x2, y2 = map(int, xyxy)
-    height = y2 - y1
-    new_height = int(height * reduction_factor)
-    y_center = (y1 + y2) // 2
-    y1_new = max(0, y_center - new_height // 2)
-    y2_new = y1_new + new_height
-    return [x1, y1_new, x2, y2_new]
+        text += res[1] + " "
+    return text.strip()
 
 class DetectionPredictor(BasePredictor):
 
@@ -97,9 +86,11 @@ class DetectionPredictor(BasePredictor):
                 label = None if self.args.hide_labels else (
                     self.model.names[c] if self.args.hide_conf else f'{self.model.names[c]} {conf:.2f}')
                 
-                adjusted_xyxy = adjust_bbox_height(xyxy)  # <-- Adjust bounding box height here
-                text_ocr = perform_ocr_on_image(im0, adjusted_xyxy)  # <-- Use adjusted bounding box here
-                label = text_ocr 
+                text_ocr = perform_ocr_on_image(im0, xyxy)
+                label = text_ocr
+                
+                # Print the OCR result
+                print(f"OCR result: {text_ocr}")
                 
                 self.annotator.box_label(xyxy, label, color=colors(c, True))
             if self.args.save_crop:
@@ -114,7 +105,7 @@ class DetectionPredictor(BasePredictor):
 
 @hydra.main(version_base=None, config_path=str(DEFAULT_CONFIG.parent), config_name=DEFAULT_CONFIG.name)
 def predict(cfg):
-    cfg.model = cfg.model or "best.pt"  #"best.pt"  
+    cfg.model = cfg.model or "best.pt"  # Use the best model
     cfg.imgsz = check_imgsz(cfg.imgsz, min_dim=2)  # check image size
     cfg.source = cfg.source if cfg.source is not None else ROOT / "assets"
     predictor = DetectionPredictor(cfg)
