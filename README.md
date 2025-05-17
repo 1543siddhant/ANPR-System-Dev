@@ -50,8 +50,33 @@ Download the YOLOv8 model weights:
 python -c "from ultralytics import YOLO; YOLO('yolov8n.pt')"
 ```
 
+# 🚀 Usage
 
+## Command-Line Interface
 
+Run the ANPR system on a single image:
+
+```bash
+python detect.py --source path/to/image.jpg
+```
+
+Run the system on a video stream:
+
+```bash
+python detect.py --source path/to/video.mp4
+```
+
+## Python API
+
+Import and use the ANPR system in your Python scripts:
+
+```python
+from anpr_system import ANPR
+
+anpr = ANPR(model_path='yolov8n.pt', ocr_lang='en')
+result = anpr.process_image('path/to/image.jpg')
+print(result)
+```
 
 # 📚 Theory Behind ANPR
 
